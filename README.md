@@ -7,3 +7,10 @@
 - https://github.com/blurrypiano/littleVulkanEngine
 - https://www.youtube.com/user/Jpres
 - https://www.youtube.com/channel/UCoG9TB1eL6dm9eNbLFueHBQ
+
+@ It With
+- Dx11, Dx12(soon)
+- vulkanSDK : https://vulkan.lunarg.com/
+- glfw : https://www.glfw.org/
+- glm : https://github.com/g-truc/glm
+- on Windows
