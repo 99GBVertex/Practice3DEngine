@@ -94,12 +94,14 @@ void FirstApp::run() {
 
 void FirstApp::loadGameObjects() {
 	std::string currentPath = std::filesystem::current_path().string();
-	std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Models/UE4Shinbi.obj");
+	std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Models/bb8.obj");
+	std::shared_ptr<LveTexture> lveTexture = LveTexture::createTextureFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Textures/Body diff MAP.jpg");
 
 	auto gameObj = LveGameObject::createGameObject();
 	gameObj.model = lveModel;
-	gameObj.transform.translation = { .0f, 350.0f, 700.0f };
-	gameObj.transform.rotation = { glm::radians(90.f), .0f, .0f };
+	gameObj.texture = lveTexture;
+	gameObj.transform.translation = { .0f, 300.0f, 700.0f };
+	gameObj.transform.rotation = { 0.f, glm::radians(90.f), glm::radians(180.f) };
 	gameObj.transform.scale = glm::vec3(3.f);
 	gameObjects.push_back(std::move(gameObj));
 }

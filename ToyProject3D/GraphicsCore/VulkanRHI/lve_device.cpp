@@ -531,4 +531,11 @@ void LveDevice::createImageWithInfo(
   }
 }
 
+void LveDevice::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+{
+	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+
+	endSingleTimeCommands(commandBuffer);
+}
+
 }  // namespace lve

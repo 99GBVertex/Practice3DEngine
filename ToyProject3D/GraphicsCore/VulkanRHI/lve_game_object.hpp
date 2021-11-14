@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lve_model.hpp"
+#include "lve_texture.hpp"
 
 // libs
 #include <glm/gtc/matrix_transform.hpp>
@@ -66,7 +67,7 @@ class LveGameObject {
   id_t getId() { return id; }
 
   std::shared_ptr<LveModel> model{};
-  glm::vec3 color{};
+  std::shared_ptr<LveTexture> texture{};
   TransformComponent transform{};
 
  private:
