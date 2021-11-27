@@ -52,9 +52,13 @@ class LveSwapChain {
   void createSwapChain();
   void createImageViews();
   void createDepthResources();
+  VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
   void createRenderPass();
   void createFramebuffers();
   void createSyncObjects();
+
+  void createTextureImageView(VkImage image);
+  void createTextureSampler();
 
   // Helper functions
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(
@@ -75,6 +79,8 @@ class LveSwapChain {
   std::vector<VkImageView> depthImageViews;
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
+  VkImageView textureImageView;
+  VkSampler textureSampler;
 
   LveDevice &device;
   VkExtent2D windowExtent;

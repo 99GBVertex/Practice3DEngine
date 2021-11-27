@@ -19,8 +19,6 @@ namespace lve {
 	}
 
 	void LveTexture::createTexture(const std::string &filepath) {
-		VkImage textureImage;
-		VkDeviceMemory textureImageMemory;
 
 		int texWidth, texHeight, texChannels;
 		stbi_uc* pixels = stbi_load(filepath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);

@@ -18,6 +18,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <filesystem>
+#include <numeric>
 
 namespace lve {
 
@@ -31,15 +32,23 @@ FirstApp::FirstApp() { loadGameObjects(); }
 FirstApp::~FirstApp() {}
 
 void FirstApp::run() {
+	// find lowest common multiple
+	auto minOffsetAlignment = std::lcm(
+		lveDevice.properties.limits.minUniformBufferOffsetAlignment,
+		lveDevice.properties.limits.nonCoherentAtomSize
+	);
+
 	std::vector<std::unique_ptr<LveBuffer>> uboBuffers(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
 	for (int i = 0; i < uboBuffers.size(); ++i)
 	{
 		uboBuffers[i] = std::make_unique<LveBuffer>(
 			lveDevice,
 			sizeof(GlobalUbo),
-			LveSwapChain::MAX_FRAMES_IN_FLIGHT,
+			1,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			/*VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+			minOffsetAlignment);*/
 		uboBuffers[i]->map();
 	}
 
@@ -79,7 +88,7 @@ void FirstApp::run() {
 		GlobalUbo ubo{};
 		ubo.projectionView = camera.getProjection() * camera.getView();
 		uboBuffers[frameIndex]->writeToBuffer(&ubo);
-		uboBuffers[frameIndex]->flushIndex(frameIndex);
+		uboBuffers[frameIndex]->flush();
 
 		// render
 		lveRenderer.beginSwapChainRenderPass(commandBuffer);

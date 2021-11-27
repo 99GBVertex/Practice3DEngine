@@ -30,6 +30,8 @@ void LveSwapChain::init() {
   createDepthResources();
   createFramebuffers();
   createSyncObjects();
+
+  createTextureSampler();
 }
 
 LveSwapChain::~LveSwapChain() {
@@ -61,6 +63,10 @@ LveSwapChain::~LveSwapChain() {
     vkDestroySemaphore(device.device(), imageAvailableSemaphores[i], nullptr);
     vkDestroyFence(device.device(), inFlightFences[i], nullptr);
   }
+
+  vkDestroySampler(device.device(), textureSampler, nullptr);
+  if(textureImageView != nullptr)
+	vkDestroyImageView(device.device(), textureImageView, nullptr);
 }
 
 VkResult LveSwapChain::acquireNextImage(uint32_t *imageIndex) {
@@ -192,23 +198,64 @@ void LveSwapChain::createSwapChain() {
 
 void LveSwapChain::createImageViews() {
   swapChainImageViews.resize(swapChainImages.size());
-  for (size_t i = 0; i < swapChainImages.size(); i++) {
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = swapChainImages[i];
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = swapChainImageFormat;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device.device(), &viewInfo, nullptr, &swapChainImageViews[i]) !=
-        VK_SUCCESS) {
-      throw std::runtime_error("failed to create texture image view!");
-    }
+  for (size_t i = 0; i < swapChainImages.size(); i++) {
+	  swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
   }
+}
+
+void LveSwapChain::createTextureImageView(VkImage image)
+{
+	textureImageView = createImageView(image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+}
+
+void LveSwapChain::createTextureSampler()
+{
+	VkSamplerCreateInfo samplerInfo{};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+	samplerInfo.anisotropyEnable = VK_TRUE;
+
+	samplerInfo.maxAnisotropy = device.properties.limits.maxSamplerAnisotropy;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = 0.0f;
+
+	if (vkCreateSampler(device.device(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture sampler!");
+	}
+}
+
+VkImageView LveSwapChain::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+{
+	VkImageViewCreateInfo viewInfo{};
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = format;
+	viewInfo.subresourceRange.aspectMask = aspectFlags;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+
+	VkImageView imageView;
+	if (vkCreateImageView(device.device(), &viewInfo, nullptr, &imageView) !=
+		VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture image view!");
+	}
+	return imageView;
 }
 
 void LveSwapChain::createRenderPass() {
@@ -329,20 +376,7 @@ void LveSwapChain::createDepthResources() {
         depthImages[i],
         depthImageMemorys[i]);
 
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = depthImages[i];
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = depthFormat;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    if (vkCreateImageView(device.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create texture image view!");
-    }
+	depthImageViews[i] = createImageView(depthImages[i], depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
   }
 }
 
