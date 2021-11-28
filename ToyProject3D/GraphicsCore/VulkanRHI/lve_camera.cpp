@@ -1,5 +1,9 @@
 #include "lve_camera.hpp"
 
+// std
+#include <cassert>
+#include <limits>
+
 namespace lve {
 
 	void LveCamera::setOrthographicProjection(
