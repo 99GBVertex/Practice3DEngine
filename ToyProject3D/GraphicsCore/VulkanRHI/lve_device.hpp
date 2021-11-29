@@ -70,6 +70,12 @@ class LveDevice {
       VkImage &image,
       VkDeviceMemory &imageMemory);
 
+  void createImageView(
+	  VkImage image,
+	  VkFormat format,
+	  VkImageAspectFlags aspectFlags,
+	  VkImageView& imageView);
+
   void transitionImageLayout(
 	  VkImage image,
 	  VkFormat format,

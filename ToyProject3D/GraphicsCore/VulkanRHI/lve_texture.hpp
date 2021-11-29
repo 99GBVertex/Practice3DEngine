@@ -15,16 +15,17 @@ public:
 
 	static std::unique_ptr<LveTexture> createTextureFromFile(LveDevice &device, const std::string &filepath);
 
-	void bind(VkCommandBuffer commandBuffer);
-	void draw(VkCommandBuffer commandBuffer);
+	VkImageView textureImageView;
+	VkSampler textureSampler;
 
 private:
 	void createTexture(const std::string &filepath);
+	void createTextureImageView(VkImage image);
+	void createTextureSampler();
 
 	LveDevice &lveDevice;
 
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
-
 };
 }
