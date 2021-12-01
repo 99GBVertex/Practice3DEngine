@@ -31,7 +31,7 @@ FirstApp::FirstApp() {
 	globalPool = LveDescriptorPool::Builder(lveDevice)
 		.setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT)
 		.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
-		.addPoolSize(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
+		.addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
 		.build();
 	loadGameObjects();
 }
@@ -59,15 +59,32 @@ void FirstApp::run() {
 		uboBuffers[i]->map();
 	}
 
+	std::vector<std::vector<VkDescriptorImageInfo>> imageInfoTable(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
+	for (int iIdx = 0; iIdx < imageInfoTable.size(); ++iIdx)
+	{	
+		for (int oIdx = 0; oIdx < gameObjects.size(); ++oIdx)
+		{
+			VkDescriptorImageInfo imageInfo;			
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageView = gameObjects[oIdx].texture->textureImageView;
+			imageInfo.sampler = gameObjects[oIdx].texture->textureSampler;
+			imageInfoTable[iIdx].push_back(imageInfo);
+		}
+	}
+		
+
 	auto globalSetLayout = LveDescriptorSetLayout::Builder(lveDevice)
 		.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build();
 
 	std::vector<VkDescriptorSet> globalDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
 	for (int i = 0; i < globalDescriptorSets.size(); i++) {
 		auto bufferInfo = uboBuffers[i]->descriptorInfo();
+		auto ImageInfo = imageInfoTable[i][0];
 		LveDescriptorWriter(*globalSetLayout, *globalPool)
 			.writeBuffer(0, &bufferInfo)
+			.writeImage (1, &ImageInfo)
 			.build(globalDescriptorSets[i]);
 	}
 

@@ -73,8 +73,13 @@ namespace lve {
 
 		lveDevice.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
 			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
 		lveDevice.copyBufferToImage(stagingBuffer, textureImage,
-			static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight), 0);
+			static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight), 1);
+
+		lveDevice.transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		
 	}
 
 	void LveTexture::createTextureImageView(VkImage image)
