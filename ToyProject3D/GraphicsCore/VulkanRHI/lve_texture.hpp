@@ -7,6 +7,7 @@ namespace lve {
 class LveTexture {
 
 public:
+	LveTexture(LveDevice &device);
 	LveTexture(LveDevice &device, const std::string &filepath);
 	~LveTexture();
 
@@ -15,8 +16,12 @@ public:
 
 	static std::unique_ptr<LveTexture> createTextureFromFile(LveDevice &device, const std::string &filepath);
 
+	VkDescriptorImageInfo descriptorInfo();
+
 	VkImageView textureImageView;
 	VkSampler textureSampler;
+
+	static std::string DEFAULT_TEXTURE_PATH;
 
 private:
 	void createTexture(const std::string &filepath);
@@ -27,5 +32,6 @@ private:
 
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
+
 };
 }

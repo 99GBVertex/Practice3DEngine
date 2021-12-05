@@ -25,9 +25,9 @@ namespace std{
 
 namespace lve {
 
-LveModel::LveModel(LveDevice &device, const LveModel::Builder &builder) : lveDevice{device} {
-  createVertexBuffers(builder.vertices);
-  createIndexBuffers(builder.indices);
+LveModel::LveModel(LveDevice &device, const LveModel::Part &partInfo) : lveDevice{device} {
+	createVertexBuffers(partInfo.vertices);
+	createIndexBuffers(partInfo.indices);
 }
 
 LveModel::~LveModel() {}
@@ -98,11 +98,14 @@ void LveModel::draw(VkCommandBuffer commandBuffer) {
 	}
 }
 
-std::unique_ptr<LveModel> LveModel::createModelFromFile(LveDevice &device, const std::string &filepath)
+void LveModel::createModelFromFile(std::vector<std::shared_ptr<LveModel>>& models, LveDevice &device, const std::string &filepath)
 {
 	Builder builder{};
 	builder.loadModel(filepath);
-	return std::make_unique<LveModel>(device, builder);
+	for (auto partInfo : builder.parts)
+	{
+		models.push_back(std::make_unique<LveModel>(device, partInfo));
+	}
 }
 
 void LveModel::bind(VkCommandBuffer commandBuffer) {
@@ -145,14 +148,12 @@ void LveModel::Builder::loadModel(const std::string & filepath)
 		throw std::runtime_error(warn + err);
 	}
 
-	vertices.clear();
-	indices.clear();
-
+	parts.clear();
 	std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 	for (const auto &shape : shapes) {
+		Part part{};
 		for (const auto &index : shape.mesh.indices) {
 			Vertex vertex{};
-
 			if (index.vertex_index >= 0) {
 				vertex.position = {
 					attrib.vertices[3 * index.vertex_index + 0],
@@ -183,11 +184,12 @@ void LveModel::Builder::loadModel(const std::string & filepath)
 			}
 
 			if (uniqueVertices.count(vertex) == 0) {
-				uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-				vertices.push_back(vertex);
+				uniqueVertices[vertex] = static_cast<uint32_t>(part.vertices.size());
+				part.vertices.push_back(vertex);
 			}
-			indices.push_back(uniqueVertices[vertex]);
+			part.indices.push_back(uniqueVertices[vertex]);
 		}
+		parts.emplace_back(part);
 	}
 }
 

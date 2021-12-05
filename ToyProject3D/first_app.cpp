@@ -28,12 +28,12 @@ struct GlobalUbo {
 };
 
 FirstApp::FirstApp() {
-	globalPool = LveDescriptorPool::Builder(lveDevice)
-		.setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT)
-		.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
-		.addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
-		.build();
 	loadGameObjects();
+	globalPool = LveDescriptorPool::Builder(lveDevice)
+		.setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT * gameObjects.size())
+		.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT * gameObjects.size())
+		.addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, LveSwapChain::MAX_FRAMES_IN_FLIGHT * gameObjects.size())
+		.build();
 }
 
 FirstApp::~FirstApp() {}
@@ -59,33 +59,30 @@ void FirstApp::run() {
 		uboBuffers[i]->map();
 	}
 
-	std::vector<std::vector<VkDescriptorImageInfo>> imageInfoTable(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
-	for (int iIdx = 0; iIdx < imageInfoTable.size(); ++iIdx)
-	{	
-		for (int oIdx = 0; oIdx < gameObjects.size(); ++oIdx)
-		{
-			VkDescriptorImageInfo imageInfo;			
-			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = gameObjects[oIdx].texture->textureImageView;
-			imageInfo.sampler = gameObjects[oIdx].texture->textureSampler;
-			imageInfoTable[iIdx].push_back(imageInfo);
-		}
-	}
-		
+	//std::vector<std::unique_ptr<LveTexture>> imageInfos(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
+	//for (int i = 0; i < imageInfos.size(); ++i)
+	//{
+	//	imageInfos[i] = std::make_unique<LveTexture>(lveDevice);
+	//}
 
 	auto globalSetLayout = LveDescriptorSetLayout::Builder(lveDevice)
 		.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 		.addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 		.build();
 
-	std::vector<VkDescriptorSet> globalDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
+	std::vector<std::vector<VkDescriptorSet>> globalDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
 	for (int i = 0; i < globalDescriptorSets.size(); i++) {
-		auto bufferInfo = uboBuffers[i]->descriptorInfo();
-		auto ImageInfo = imageInfoTable[i][0];
-		LveDescriptorWriter(*globalSetLayout, *globalPool)
-			.writeBuffer(0, &bufferInfo)
-			.writeImage (1, &ImageInfo)
-			.build(globalDescriptorSets[i]);
+		for (auto& obj : gameObjects) {
+			VkDescriptorSet objDescriptorSet;
+			auto bufferInfo = uboBuffers[i]->descriptorInfo();
+			auto ImageInfo = obj.texture->descriptorInfo();
+			LveDescriptorWriter(*globalSetLayout, *globalPool)
+				.writeBuffer(0, &bufferInfo)
+				.writeImage(1, &ImageInfo)
+				.build(objDescriptorSet);
+
+			globalDescriptorSets[i].push_back(objDescriptorSet);
+		}
 	}
 
   SimpleRenderSystem simpleRenderSystem{
@@ -121,7 +118,7 @@ void FirstApp::run() {
 			frameTime,
 			commandBuffer,
 			camera,
-			globalDescriptorSets[frameIndex]
+			nullptr
 		};
 
 		// update
@@ -132,7 +129,17 @@ void FirstApp::run() {
 
 		// render
 		lveRenderer.beginSwapChainRenderPass(commandBuffer);
-		simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
+		for (int i = 0 ; i < gameObjects.size() ; i ++)
+		{
+			auto& obj = gameObjects[i];
+			frameInfo.globalDescriptorSet = globalDescriptorSets[frameIndex][i];
+			// TODO reuse desctripor Writer
+			/*auto ImageInfo = obj.texture->descriptorInfo();
+			LveDescriptorWriter(*globalSetLayout, *globalPool)
+				.writeImage(1, &ImageInfo)
+				.overwrite(globalDescriptorSets[frameIndex]);*/
+			simpleRenderSystem.renderGameObjects(frameInfo, obj);
+		}
 		lveRenderer.endSwapChainRenderPass(commandBuffer);
 		lveRenderer.endFrame();
     }
@@ -143,16 +150,26 @@ void FirstApp::run() {
 
 void FirstApp::loadGameObjects() {
 	std::string currentPath = std::filesystem::current_path().string();
-	std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Models/bb8.obj");
-	std::shared_ptr<LveTexture> lveTexture = LveTexture::createTextureFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Textures/Body diff MAP.jpg");
+	std::vector<std::shared_ptr<LveModel>> lveModels;
+	LveModel::createModelFromFile(lveModels, lveDevice, currentPath + "/ToyProject3D/Resources/Models/bb8.obj");
+	std::shared_ptr<LveTexture> lveHeadDiffuseTexture = LveTexture::createTextureFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Textures/HEAD diff MAP.jpg");
+	std::shared_ptr<LveTexture> lveBodyDiffuseTexture = LveTexture::createTextureFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Textures/Body diff MAP.jpg");
 
-	auto gameObj = LveGameObject::createGameObject();
-	gameObj.model = lveModel;
-	gameObj.texture = lveTexture;
-	gameObj.transform.translation = { .0f, 300.0f, 700.0f };
-	gameObj.transform.rotation = { 0.f, glm::radians(90.f), glm::radians(180.f) };
-	gameObj.transform.scale = glm::vec3(3.f);
-	gameObjects.push_back(std::move(gameObj));
+	auto objHeadPart = LveGameObject::createGameObject();
+	objHeadPart.model = lveModels[0];
+	objHeadPart.texture = lveHeadDiffuseTexture;
+	objHeadPart.transform.translation = { .0f, 300.0f, 700.0f };
+	objHeadPart.transform.rotation = { 0.f, glm::radians(90.f), glm::radians(180.f) };
+	objHeadPart.transform.scale = glm::vec3(3.f);
+	gameObjects.push_back(std::move(objHeadPart));
+
+	auto objBodyPart = LveGameObject::createGameObject();
+	objBodyPart.model = lveModels[1];
+	objBodyPart.texture = lveBodyDiffuseTexture;
+	objBodyPart.transform.translation = { .0f, 300.0f, 700.0f };
+	objBodyPart.transform.rotation = { 0.f, glm::radians(90.f), glm::radians(180.f) };
+	objBodyPart.transform.scale = glm::vec3(3.f);
+	gameObjects.push_back(std::move(objBodyPart));
 }
 
 }  // namespace lve

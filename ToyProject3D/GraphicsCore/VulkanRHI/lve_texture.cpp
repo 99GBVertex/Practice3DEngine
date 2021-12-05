@@ -4,10 +4,18 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+// std
+#include <filesystem>
+
 namespace lve {
 
-	LveTexture::LveTexture(LveDevice& device, const std::string &filepath)
-		: lveDevice(device) {
+	LveTexture::LveTexture(LveDevice& device) : lveDevice(device) {
+		createTexture(DEFAULT_TEXTURE_PATH);
+		createTextureImageView(textureImage);
+		createTextureSampler();
+	}
+
+	LveTexture::LveTexture(LveDevice & device, const std::string & filepath) : lveDevice(device) {
 		createTexture(filepath);
 		createTextureImageView(textureImage);
 		createTextureSampler();
@@ -23,6 +31,8 @@ namespace lve {
 	std::unique_ptr<LveTexture> LveTexture::createTextureFromFile(LveDevice &device, const std::string &filepath) {
 		return std::make_unique<LveTexture>(device, filepath);
 	}
+
+	std::string LveTexture::DEFAULT_TEXTURE_PATH = std::filesystem::current_path().string() + "/ToyProject3D/Resources/Textures/checker.jpg";
 
 	void LveTexture::createTexture(const std::string &filepath) {
 
@@ -113,5 +123,18 @@ namespace lve {
 		if (vkCreateSampler(lveDevice.device(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create texture sampler!");
 		}
+	}
+
+	/**
+	 * Create a image info descriptor
+	 *
+	 * @return VkDescriptorImageInfo of specified offset and range
+	 */
+	VkDescriptorImageInfo LveTexture::descriptorInfo() {
+		return VkDescriptorImageInfo{
+			textureSampler,
+			textureImageView,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
 	}
 }

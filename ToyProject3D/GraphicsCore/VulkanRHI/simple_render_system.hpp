@@ -20,8 +20,8 @@ class SimpleRenderSystem {
   SimpleRenderSystem &operator=(const SimpleRenderSystem &) = delete;
 
   void renderGameObjects(
-	  FrameInfo &frameInfo,
-	  std::vector<LveGameObject> &gameObjects);
+	  FrameInfo& frameInfo,
+	  LveGameObject& gameObject);
 
  private:
   void createPipelineLayout(VkDescriptorSetLayout globalSetlayout);

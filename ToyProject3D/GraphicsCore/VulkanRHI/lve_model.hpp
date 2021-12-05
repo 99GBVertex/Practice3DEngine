@@ -29,20 +29,24 @@ class LveModel {
 	}
   };
 
-  struct Builder {
+  struct Part {
 	  std::vector<Vertex> vertices{};
 	  std::vector<uint32_t> indices{};
+  };
+
+  struct Builder {
+	  std::vector<Part> parts{};
 
 	  void loadModel(const std::string &filepath);
   };
 
-  LveModel(LveDevice &device, const LveModel::Builder &builder);
+  LveModel(LveDevice &device, const LveModel::Part &partInfo);
   ~LveModel();
 
   LveModel(const LveModel &) = delete;
   LveModel &operator=(const LveModel &) = delete;
 
-  static std::unique_ptr<LveModel> createModelFromFile(LveDevice &device, const std::string &filepath);
+  static void createModelFromFile(std::vector<std::shared_ptr<LveModel>>& models, LveDevice &device, const std::string &filepath);
 
   void bind(VkCommandBuffer commandBuffer);
   void draw(VkCommandBuffer commandBuffer);
