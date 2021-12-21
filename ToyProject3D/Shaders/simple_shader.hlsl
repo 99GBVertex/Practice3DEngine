@@ -17,7 +17,7 @@ struct VertexOutput
     float4 position : SV_POSITION;
 };
 
-struct GlobalBuffer
+cbuffer GlobalBuffer : register(b0)
 {
     float4x4 projectionViewMatrix;
     float3 lightDirection;
@@ -30,24 +30,25 @@ struct Push
 };
 
 #ifdef _DXC
-GlobalBuffer ubo : register(b0);
 [[vk::push_constant]] Push push;
 #else
-ConstantBuffer<GlobalBuffer> ubo : register(b0);
 [[vk::push_constant]] ConstantBuffer<Push> push;
 #endif
 
+Texture2D meshTexture : register(t1);
 sampler texSampler : register(s1);
+
+#define ambient 0.02
 
 VertexOutput VSMain(VertexInput In)
 {
     VertexOutput Out;
 
-    Out.position = mul(ubo.projectionViewMatrix, mul(push.modelMatrix, float4(In.position, 1.0)));
+    Out.position = mul(projectionViewMatrix, mul(push.modelMatrix, float4(In.position, 1.0)));
 
     float4 normalWorldSpace = normalize(mul(push.normalMatrix, float4(In.normal, 1.0)));
 
-    float lightIntensity = 0.02 + max(dot(normalWorldSpace, float4(ubo.lightDirection, 1.0)), 0);
+    float lightIntensity = ambient + max(dot(normalWorldSpace, float4(lightDirection, 1.0)), 0);
 
     Out.fragColor = lightIntensity * In.color;
     Out.fragTexCoord = In.uv;
@@ -57,7 +58,6 @@ VertexOutput VSMain(VertexInput In)
 
 float4 PSMain(VertexOutput input) : SV_TARGET
 {
-    Texture2D meshTexture;
     float4 color = meshTexture.Sample(texSampler, input.fragTexCoord.xy);
     
     return color;
