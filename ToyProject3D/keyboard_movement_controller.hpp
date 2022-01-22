@@ -22,7 +22,10 @@ class KeyboardMovementController {
   void moveInPlaneXZ(GLFWwindow* window, float dt, LveGameObject& gameObject);
 
   KeyMappings keys{};
-  float moveSpeed{30.f};
-  float lookSpeed{1.5f};
+  double xPosOld = 0;
+  double yPosOld = 0;
+  bool bClickState = false;
+  float moveSpeed{50.f};
+  float lookSpeed{5.f};
 };
 }  // namespace lve

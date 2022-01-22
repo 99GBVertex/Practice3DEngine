@@ -2,6 +2,9 @@
 
 #include "lve_device.hpp"
 
+//std
+#include <memory>
+
 namespace lve {
 
 class LveTexture {

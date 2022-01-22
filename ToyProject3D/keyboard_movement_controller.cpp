@@ -8,10 +8,31 @@ namespace lve {
 void KeyboardMovementController::moveInPlaneXZ(
     GLFWwindow* window, float dt, LveGameObject& gameObject) {
   glm::vec3 rotate{0};
-  if (glfwGetKey(window, keys.lookRight) == GLFW_PRESS) rotate.y += 1.f;
-  if (glfwGetKey(window, keys.lookLeft) == GLFW_PRESS) rotate.y -= 1.f;
-  if (glfwGetKey(window, keys.lookUp) == GLFW_PRESS) rotate.x += 1.f;
-  if (glfwGetKey(window, keys.lookDown) == GLFW_PRESS) rotate.x -= 1.f;
+  
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+  {
+      if (bClickState == false)
+      {
+          bClickState = true;
+          glfwGetCursorPos(window, &xPosOld, &yPosOld);
+      }
+      else
+      {
+          double xPos = .0f;
+          double yPos = .0f;
+          glfwGetCursorPos(window, &xPos, &yPos);
+          rotate.x = -(yPos - yPosOld);
+          rotate.y = xPos - xPosOld;
+          xPosOld = xPos;
+          yPosOld = yPos;
+      }
+  }
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE)
+  {
+      bClickState = false;
+      xPosOld = 0.f;
+      yPosOld = 0.f;
+  }
 
   if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
     gameObject.transform.rotation += lookSpeed * dt * glm::normalize(rotate);
