@@ -202,4 +202,12 @@ void LvePipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
   configInfo.dynamicStateInfo.flags = 0;
 }
 
+void LvePipeline::gridPipelineConfigInfo(PipelineConfigInfo& configInfo)
+{
+    defaultPipelineConfigInfo(configInfo);
+    configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_TRUE;
+    configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_LINE;
+}
+
 }  // namespace lve

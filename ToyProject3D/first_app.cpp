@@ -5,6 +5,7 @@
 #include "GraphicsCore/VulkanRHI/lve_frame_info.hpp"
 #include "GraphicsCore/VulkanRHI/lve_camera.hpp"
 #include "GraphicsCore/VulkanRHI/simple_render_system.hpp"
+#include "GraphicsCore/VulkanRHI/grid_render_system.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -29,6 +30,7 @@ struct GlobalUbo {
 
 FirstApp::FirstApp() {
 	loadGameObjects();
+	makeGridObject();
 	globalPool = LveDescriptorPool::Builder(lveDevice)
 		.setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT * gameObjects.size())
 		.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT * gameObjects.size())
@@ -89,10 +91,15 @@ void FirstApp::run() {
 	  lveDevice,
 	  lveRenderer.getSwapChainRenderPass(),
 	  globalSetLayout->getDescriptorSetLayout()};
+  GridRenderSystem gridRenderSystem{
+	  lveDevice,
+	  lveRenderer.getSwapChainRenderPass(),
+	  globalSetLayout->getDescriptorSetLayout() };
   LveCamera camera{};
 
   auto viewerObject = LveGameObject::createGameObject();
-  viewerObject.transform.rotation = { glm::radians(-5.f), 0.f, 0.f };
+  viewerObject.transform.translation = { 0.f, -30.f, -50.f };
+  viewerObject.transform.rotation = { glm::radians(-25.f), glm::radians(0.0001f), 0.f };
   KeyboardMovementController cameraController{};
 
   auto currentTime = std::chrono::high_resolution_clock::now();
@@ -109,7 +116,7 @@ void FirstApp::run() {
 	camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
 	float aspect = lveRenderer.getAspectRatio();
-	camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 1000.f);
+	camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 3000.f);
 
     if (auto commandBuffer = lveRenderer.beginFrame()) {
 		int frameIndex = lveRenderer.getFrameIndex();
@@ -140,6 +147,7 @@ void FirstApp::run() {
 				.overwrite(globalDescriptorSets[frameIndex]);*/
 			simpleRenderSystem.renderGameObjects(frameInfo, obj);
 		}
+		gridRenderSystem.renderGrid(frameInfo, *gridObject.get());
 		lveRenderer.endSwapChainRenderPass(commandBuffer);
 		lveRenderer.endFrame();
     }
@@ -154,22 +162,136 @@ void FirstApp::loadGameObjects() {
 	LveModel::createModelFromFile(lveModels, lveDevice, currentPath + "/ToyProject3D/Resources/Models/bb8.obj");
 	std::shared_ptr<LveTexture> lveHeadDiffuseTexture = LveTexture::createTextureFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Textures/HEAD diff MAP.jpg");
 	std::shared_ptr<LveTexture> lveBodyDiffuseTexture = LveTexture::createTextureFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Textures/Body diff MAP.jpg");
+	defaultTexture = LveTexture::createTextureFromFile(lveDevice, currentPath + "/ToyProject3D/Resources/Textures/checker.jpg");
+
 
 	auto objHeadPart = LveGameObject::createGameObject();
 	objHeadPart.model = lveModels[0];
 	objHeadPart.texture = lveHeadDiffuseTexture;
-	objHeadPart.transform.translation = { .0f, 300.0f, 700.0f };
+	objHeadPart.transform.translation = { .0f, .0f, .0f };
 	objHeadPart.transform.rotation = { 0.f, glm::radians(90.f), glm::radians(180.f) };
-	objHeadPart.transform.scale = glm::vec3(3.f);
+	objHeadPart.transform.scale = glm::vec3(.1f);
 	gameObjects.push_back(std::move(objHeadPart));
 
 	auto objBodyPart = LveGameObject::createGameObject();
 	objBodyPart.model = lveModels[1];
 	objBodyPart.texture = lveBodyDiffuseTexture;
-	objBodyPart.transform.translation = { .0f, 300.0f, 700.0f };
+	objBodyPart.transform.translation = { .0f, .0f, .0f };
 	objBodyPart.transform.rotation = { 0.f, glm::radians(90.f), glm::radians(180.f) };
-	objBodyPart.transform.scale = glm::vec3(3.f);
+	objBodyPart.transform.scale = glm::vec3(.1f);
 	gameObjects.push_back(std::move(objBodyPart));
+}
+
+void FirstApp::makeGridObject()
+{
+	//draw x grid
+	LveModel::Part grid;
+	float gridDimension = 1000.0f;
+	int gridSections = 50;
+	float halfGridSection = gridSections * 0.5f;
+	float divideGrid = 1.f / gridSections;
+
+	//Draw -Z -> +Z (Red->White) //[X-Z Axis]
+	LveModel::Vertex vertex{};
+	for (int i = 0; i < gridSections; i++)
+	{	
+		float drawRatio = 1 - glm::abs((i - halfGridSection) * divideGrid);
+		vertex.position = { 
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections,
+			0.0f,
+			-gridDimension / 2.0f
+		};
+		vertex.color = { 1.f, 1.f, 1.f };
+		vertex.color *= drawRatio;
+		vertex.color -= glm::vec3{ .5f, .5f, .5f };
+		grid.vertices.emplace_back(vertex);
+
+		vertex.position = {
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections,
+			0.0f, 
+			+(gridDimension) / 2.0f - gridDimension / gridSections
+		};
+		vertex.color = glm::vec3{ 1.f, 1.f, 1.f };
+		vertex.color *= drawRatio;
+		vertex.color -= glm::vec3{ .5f, .5f, .5f };
+		grid.vertices.emplace_back(vertex);
+	}
+
+	//Draw -X -> +X (Blue->White)  //[X-Z Axis]
+	for (int i = 0; i < gridSections; i++)
+	{
+		float drawRatio = 1 - glm::abs((i - halfGridSection) * divideGrid);
+		vertex.position = {
+			-gridDimension / 2.0f, 
+			0.0f, 
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections
+		};
+		vertex.color = { 1.f, 1.f, 1.f };
+		vertex.color *= drawRatio;
+		vertex.color -= glm::vec3{ .5f, .5f, .5f };
+		grid.vertices.emplace_back(vertex);
+
+		vertex.position = {
+			+gridDimension / 2.0f - gridDimension / gridSections,
+			0.0f, 
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections
+		};
+		vertex.color = { 1.f, 1.f, 1.f };
+		vertex.color *= drawRatio;
+		vertex.color -= glm::vec3{ .5f, .5f, .5f };
+		grid.vertices.emplace_back(vertex);
+	}
+
+	//Draw -X -> +X (Blue->White) //[X-Y Axis]
+	/*for (int i = 0; i < gridSections; i++)
+	{
+		vertex.position = {
+			-gridDimension / 2.0f, 
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections,
+			gridDimension
+		};
+		vertex.color = { .0f, .0f, 1.f };
+		grid.vertices.emplace_back(vertex);
+
+		vertex.position = {
+			+gridDimension / 2.0f - gridDimension / gridSections,
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections,
+			gridDimension
+		};
+		vertex.color = { 1.f, 1.f, 1.f };
+		grid.vertices.emplace_back(vertex);
+	}*/
+
+	//Draw -Y -> +Y (Green->White) //[X-Y Axis]
+	/*for (int i = 0; i < gridSections; i++)
+	{
+		vertex.position = {
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections,
+			-gridDimension / 2.0f,
+			gridDimension
+		};
+		vertex.color = { .0f, 1.f, .0f };
+		grid.vertices.emplace_back(vertex);
+
+		vertex.position = {
+			0.0f - gridDimension / 2 + i * gridDimension / gridSections, 
+			+gridDimension / 2.0f - gridDimension / gridSections,
+			gridDimension
+		};
+		vertex.color = { 1.f, 1.f, 1.f };
+		grid.vertices.emplace_back(vertex);
+	}*/
+	grid.vertices.emplace_back(vertex);
+	
+	std::shared_ptr<LveModel> gridModel = std::make_unique<LveModel>(lveDevice, grid);
+
+	auto gridObj = LveGameObject::createGameObject();
+	gridObj.model = gridModel;
+	gridObj.texture = defaultTexture;
+	gridObj.transform.translation = { .0f, .0f, .0f };
+	gridObj.transform.rotation = { 0.f, 0.f, 0.f };
+	gridObj.transform.scale = glm::vec3(1.f);
+	gridObject = std::make_unique<LveGameObject>(std::move(gridObj));
 }
 
 }  // namespace lve

@@ -26,13 +26,17 @@ class FirstApp {
 
  private:
   void loadGameObjects();
+  void makeGridObject();
 
   LveWindow lveWindow{WIDTH, HEIGHT, "Vulkan Tutorial"};
   LveDevice lveDevice {lveWindow};
   LveRenderer lveRenderer {lveWindow, lveDevice};
 
+  std::shared_ptr<LveTexture> defaultTexture;
+
   // note: order of declarations matters
   std::unique_ptr<LveDescriptorPool> globalPool{};
   std::vector<LveGameObject> gameObjects;
+  std::unique_ptr<LveGameObject> gridObject{};
 };
 }  // namespace lve

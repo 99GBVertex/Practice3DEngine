@@ -42,6 +42,7 @@ class LvePipeline {
   void bind(VkCommandBuffer commandBuffer);
 
   static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
+  static void gridPipelineConfigInfo(PipelineConfigInfo& configInfo);
 
  private:
   static std::vector<char> readFile(const std::string& filepath);
